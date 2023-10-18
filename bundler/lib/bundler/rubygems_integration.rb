@@ -522,7 +522,18 @@ module Bundler
     def gem_remote_fetcher
       require "rubygems/remote_fetcher"
       proxy = Gem.configuration[:http_proxy]
-      Gem::RemoteFetcher.new(proxy)
+
+      if ENV["USE_FETCHER_CACHE"] == "true"
+        Thread.current["bundler_gem_remote_fetchers"] ||= {}
+        Thread.current["bundler_gem_remote_fetchers"][proxy] ||= Gem::RemoteFetcher.new(proxy)
+        fetcher = Thread.current["bundler_gem_remote_fetchers"][proxy]
+        fetcher.headers = {}
+      else
+        fetcher = Gem::RemoteFetcher.new(proxy)
+      end
+
+      puts "Using fetcher with object id: ", fetcher.object_id
+      fetcher
     end
 
     def build(spec, skip_validation = false)
